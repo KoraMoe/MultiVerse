@@ -1,0 +1,17 @@
+{
+  "name": "multiverse",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/jest": "^29.5.14"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "kubo-rpc-client": "^5.1.0",
+    "multiformats": "^13.3.3"
+  }
+}
