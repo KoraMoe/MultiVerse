@@ -11,7 +11,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "kubo-rpc-client": "^5.1.0",
-    "multiformats": "^13.3.3"
+    "ethers": "^6.14.0",
+    "kubo-rpc-client": "^5.1.0"
   }
 }

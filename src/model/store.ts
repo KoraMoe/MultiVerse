@@ -1,12 +1,11 @@
-import { CID } from 'multiformats/cid'
 import { Core, Profile, Timeline } from './types'
-import type { Note, File } from './types'
+import type { Note, File, Ethereum } from './types'
 
 /**
- * Verification interface for signature validation
+ * Verification interface for Ethereum signature validation
  */
-interface Verifier {
-  verify(data: any, signature: string, publicKey: string): Promise<boolean>;
+export interface Verifier {
+  verify(data: any, signature: Ethereum.Signature, address: Ethereum.Address): Promise<boolean>;
 }
 
 /**
@@ -26,17 +25,18 @@ export class Store {
   /**
    * Add a new block to the store
    * @param block Block to add
+   * @param blockCid Optional CID to use for this block (for testing)
    * @returns Promise resolving to true if block was added successfully
    */
-  async addBlock<T>(block: Core.Block<T>): Promise<boolean> {
+  async addBlock<T>(block: Core.Block<T>, blockCid: string): Promise<boolean> {
     // Ensure block is from the expected operator
     if (block.operator !== this.operatorId) {
       throw new Error(`Block operator ${block.operator} does not match expected operator ${this.operatorId}`);
     }
     
-    const previousCid = block.previous.toString();
+    const previousCid = block.previous || '';
     
-    // Verify previous block exists in the store unless it's the root
+    // Verify previous block exists in the store unless it's the root or the genesis block
     if (previousCid !== "" && !this.blocks.has(previousCid)) {
       throw new Error(`Previous block ${previousCid} not found`);
     }
@@ -47,9 +47,6 @@ export class Store {
       throw new Error("Invalid block signature");
     }
     
-    // Generate a mock CID for this block - in a real implementation
-    // this would be cryptographically generated
-    const blockCid = `block_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     
     // Store block with its CID
     this.blocks.set(blockCid, {...block});
@@ -58,6 +55,24 @@ export class Store {
     this.headCid = blockCid;
     
     return true;
+  }
+  
+  /**
+   * Get the CID of a block that has been added to the store
+   * @param block Block to find the CID for
+   * @returns Promise resolving to the CID of the block, or null if not found
+   */
+  async getBlockCid<T>(block: Core.Block<T>): Promise<string> {
+    // Find the block in the store by comparing relevant properties
+    for (const [cid, storedBlock] of this.blocks.entries()) {
+      // Compare timestamp and signature which should be unique for each block
+      if (storedBlock.timestamp === block.timestamp && 
+          storedBlock.signature === block.signature) {
+        return cid;
+      }
+    }
+    
+    throw new Error("Block not found in store");
   }
   
   /**
@@ -196,15 +211,13 @@ export class Store {
     
     switch (operation.type) {
       case Timeline.OperationType.ADD_NOTE:
-        if (!newState.notes.some(cid => cid.toString() === operation.payload.noteCid.toString())) {
+        if (!newState.notes.includes(operation.payload.noteCid)) {
           newState.notes.push(operation.payload.noteCid);
         }
         break;
         
       case Timeline.OperationType.REMOVE_NOTE:
-        newState.notes = newState.notes.filter(
-          cid => cid.toString() !== operation.payload.noteCid.toString()
-        );
+        newState.notes = newState.notes.filter(cid => cid !== operation.payload.noteCid);
         break;
     }
     
@@ -229,7 +242,7 @@ export class Store {
     // Create a map of children for each block
     const childrenMap = new Map<string, string[]>();
     
-    // Initialize childrenMap with empty arrays for all blocks including root
+    // Initialize childrenMap with empty arrays for all blocks including root and genesis
     childrenMap.set("", []);
     
     // Process all blocks to build the parent-child relationships
@@ -243,7 +256,7 @@ export class Store {
       }
       
       // Get the previous block's CID
-      const prevCid = block.previous.toString();
+      const prevCid = block.previous || '';
       
       // Add this block as a child of its parent
       if (!childrenMap.has(prevCid)) {
@@ -253,10 +266,10 @@ export class Store {
       childrenMap.get(prevCid)?.push(blockCid);
     }
     
-    // Find all blocks with root as parent (previous = "")
-    const rootChildren = childrenMap.get("") || [];
+    // Find all blocks with root or genesis as parent
+    const rootChildren = [...(childrenMap.get("") || [])];
     
-    // Start building the chain from the root
+    // Start building the chain from the root/genesis
     const orderedBlocks: Core.Block<any>[] = [];
     this.buildOrderedChain(rootChildren, blockMap, childrenMap, orderedBlocks);
     

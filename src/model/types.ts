@@ -1,4 +1,20 @@
-import { CID } from 'multiformats/cid'
+/**
+ * Ethereum related types
+ */
+export namespace Ethereum {
+  /**
+   * Ethereum address (20 bytes, hex string with 0x prefix)
+   * Example: 0x71C7656EC7ab88b098defB751B7401B5f6d8976F
+   */
+  export type Address = string;
+
+  /**
+   * Ethereum signature (65 bytes, hex string with 0x prefix)
+   * r, s, v components concatenated
+   * Example: 0x4355c47d63924e8a72e509b65029052eb6c299d53a04e167c5775fd466751c9d07299936d304c153f6443dfa05f40ff007d72911b6f72307f996231605b915621c
+   */
+  export type Signature = string;
+}
 
 /**
  * Core blockchain structures
@@ -14,10 +30,10 @@ export namespace Core {
   }
 
   export interface Block<T> {
-    previous: CID
+    previous?: string
     timestamp: number
-    operator: string
-    signature: string
+    operator: Ethereum.Address
+    signature: Ethereum.Signature
     type: BlockType
     data: T
   }
@@ -32,8 +48,8 @@ export namespace File {
    */
   export interface Metadata {
     mimetype: string
-    user: string
-    signature: string
+    user: Ethereum.Address
+    signature: Ethereum.Signature
     timestamp: number
     size?: number
     name?: string
@@ -41,7 +57,7 @@ export namespace File {
 
   export interface File {
     metadata: Metadata
-    content: CID
+    content: string
   }
 }
 
@@ -63,11 +79,11 @@ export namespace Note {
   export interface Content {
     content?: string
     createdAt: number
-    attachments?: CID[]
-    replyTo?: CID  // CID of note this is replying to
-    originalNote?: CID  // CID of original note for forward/quotes
-    author: string  // User ID of the author
-    signature: string
+    attachments?: string[]
+    replyTo?: string  // CID of note this is replying to
+    originalNote?: string  // CID of original note for forward/quotes
+    author: Ethereum.Address  // Ethereum address of the author
+    signature: Ethereum.Signature
     type: NoteType
   }
 }
@@ -82,7 +98,7 @@ export namespace Profile {
   export interface State {
     username: string
     bio: string
-    avatar?: CID  // Optional CID to avatar image stored in IPFS
+    avatar?: string  // Optional CID to avatar image stored in IPFS
     following: string[]  // Array of user IDs the user follows
   }
 
@@ -110,7 +126,7 @@ export namespace Profile {
     }
 
     export interface SetAvatar {
-      avatar: CID;
+      avatar: string;
     }
 
     export interface AddFollowing {
@@ -141,7 +157,7 @@ export namespace Timeline {
    * Timeline state representation
    */
   export interface State {
-    notes: CID[]  // Array of CIDs referencing notes in IPFS
+    notes: string[]  // Array of string CIDs referencing notes in IPFS
   }
 
   /**
@@ -157,11 +173,11 @@ export namespace Timeline {
    */
   export namespace Payload {
     export interface AddNote {
-      noteCid: CID;
+      noteCid: string;
     }
 
     export interface RemoveNote {
-      noteCid: CID;
+      noteCid: string;
     }
   }
 
