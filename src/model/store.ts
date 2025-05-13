@@ -14,7 +14,6 @@ export interface Verifier {
 export class Store {
   private verifier: Verifier;
   private blocks: Map<string, Core.Block<any>> = new Map();
-  private headCid: string | null = null;
   private operatorId: string;
   
   constructor(verifier: Verifier, operatorId: string) {
@@ -34,13 +33,6 @@ export class Store {
       throw new Error(`Block operator ${block.operator} does not match expected operator ${this.operatorId}`);
     }
     
-    const previousCid = block.previous || '';
-    
-    // Verify previous block exists in the store unless it's the root or the genesis block
-    if (previousCid !== "" && !this.blocks.has(previousCid)) {
-      throw new Error(`Previous block ${previousCid} not found`);
-    }
-    
     // Verify signature
     const isValid = await this.verifyBlockSignature(block);
     if (!isValid) {
@@ -50,9 +42,6 @@ export class Store {
     
     // Store block with its CID
     this.blocks.set(blockCid, {...block});
-    
-    // Update head to current block
-    this.headCid = blockCid;
     
     return true;
   }
@@ -103,11 +92,6 @@ export class Store {
    * @returns Promise resolving to profile state
    */
   async getProfileState(): Promise<Profile.State> {
-    // Check if head exists
-    if (!this.headCid) {
-      throw new Error("No blocks found");
-    }
-    
     // Initialize default state
     let state: Profile.State = {
       username: "",
@@ -116,7 +100,7 @@ export class Store {
     };
     
     // Build chain of blocks
-    const chain = this.getBlockChain();
+    const chain = this.getline();
     
     // Apply operations in chronological order
     for (const block of chain) {
@@ -173,18 +157,13 @@ export class Store {
    * @returns Promise resolving to timeline state
    */
   async getTimelineState(): Promise<Timeline.State> {
-    // Check if head exists
-    if (!this.headCid) {
-      throw new Error("No blocks found");
-    }
-    
     // Initialize default state
     let state: Timeline.State = {
       notes: []
     };
     
     // Build chain of blocks
-    const chain = this.getBlockChain();
+    const chain = this.getline();
     
     // Apply operations in chronological order
     for (const block of chain) {
@@ -228,11 +207,7 @@ export class Store {
    * Get a chain of blocks in chronological order
    * @returns Array of blocks in chronological order (oldest first)
    */
-  private getBlockChain(): Core.Block<any>[] {
-    if (!this.headCid || this.blocks.size === 0) {
-      return [];
-    }
-    
+  private getline(): Core.Block<any>[] {
     // Create a map of blocks by their CID for easy lookup
     const blockMap = new Map<string, {
       block: Core.Block<any>,

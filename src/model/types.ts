@@ -17,7 +17,7 @@ export namespace Ethereum {
 }
 
 /**
- * Core blockchain structures
+ * Core line structures
  */
 export namespace Core {
   /**

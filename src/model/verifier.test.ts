@@ -65,7 +65,7 @@ describe('EthereumVerifier', () => {
   
   test('should handle different data types correctly', async () => {
     // Test with a string
-    const stringData = "Hello, blockchain!";
+    const stringData = "Hello, multiverse!";
     const stringSignature = await signData(wallet.privateKey, stringData);
     const stringValid = await verifier.verify(stringData, stringSignature, address);
     expect(stringValid).toBe(true);
